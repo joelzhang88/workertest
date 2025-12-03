@@ -1,10 +1,10 @@
 name: Auto-create branches (master, develop, staging)
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   ensure_branches_exist:
@@ -18,19 +18,23 @@ jobs:
 
       - name: Set up Git
         run: |
-          git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
 
       - name: Ensure branches exist
+        env:
+          REPO: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
           TARGET_BRANCHES=("master" "develop" "staging")
 
           for BRANCH in "${TARGET_BRANCHES[@]}"; do
-            if git ls-remote --exit-code --heads origin $BRANCH > /dev/null 2>&1; then
-              echo "Branch '$BRANCH' already exists — skipping creation."
+            if git ls-remote --heads origin $BRANCH > /dev/null 2>&1; then
+              echo "Branch '$BRANCH' exists."
             else
-              echo "Branch '$BRANCH' does not exist. Creating now."
+              echo "Creating '$BRANCH' from 'main' ..."
               git checkout -b $BRANCH main
-              git push origin $BRANCH
+              git push $REPO $BRANCH
+              echo "Created '$BRANCH'"
             fi
           done
+
